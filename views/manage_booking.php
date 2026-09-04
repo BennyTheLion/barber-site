@@ -120,6 +120,11 @@ for($i = 1; $i <= 30; $i++) {
                                 <p class="text-muted text-center small mt-2">
                                     <i class="fas fa-info-circle"></i> שינויים ישלחו הודעה לעסק
                                 </p>
+                                <div class="text-center mt-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="enablePushBtn" onclick="enablePushNotifications(<?= (int)$appointment['customer_id'] ?>)">
+                                        <i class="fas fa-bell"></i> קבל התראות פוש על התור
+                                    </button>
+                                </div>
                             <?php else: ?>
                                 <div class="alert alert-warning text-center">
                                     <i class="fas fa-info-circle"></i> תור זה בוטל. לא ניתן לבצע שינויים.
@@ -409,10 +414,32 @@ for($i = 1; $i <= 30; $i++) {
 }
 </style>
 
+<script src="<?php echo SITE_URL; ?>/assets/js/push-client.js"></script>
 <script>
 // ========== SHOW EDIT MODAL ==========
 function userEditAppointment() {
     new bootstrap.Modal(document.getElementById('editAppointmentModal')).show();
+}
+
+// ========== ENABLE PUSH NOTIFICATIONS ==========
+async function enablePushNotifications(customerId) {
+    const btn = document.getElementById('enablePushBtn');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> מפעיל...';
+
+    try {
+        const result = await PushClient.subscribeAndSaveForCustomer(customerId);
+        if (result.success) {
+            btn.innerHTML = '<i class="fas fa-check"></i> התראות פעילות';
+        } else {
+            throw new Error(result.error || 'שגיאה');
+        }
+    } catch (error) {
+        alert('❌ לא ניתן להפעיל התראות: ' + error.message);
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
 }
 
 // ========== CANCEL APPOINTMENT ==========

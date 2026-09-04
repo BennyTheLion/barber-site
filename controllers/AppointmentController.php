@@ -1,5 +1,7 @@
 <?php
 // controllers/AppointmentController.php
+require_once __DIR__ . '/../push/PushService.php';
+
 class AppointmentController {
     
     // פונקציה להצגת טופס הזמנת תור
@@ -178,12 +180,30 @@ class AppointmentController {
             $emailData = $this->getAppointmentEmailData($appointmentId);
             if ($emailData) {
                 Mailer::appointmentCreated($emailData);
+                PushService::notifyAdmins($this->buildPushPayload($emailData, "תור חדש נקבע"));
+
+                // If the browser already produced a push subscription for
+                // this booking (see push-client.js on the booking form),
+                // link it to the customer now and send the confirmation.
+                $rawSubscription = $_POST['push_subscription'] ?? '';
+                if ($rawSubscription) {
+                    $subscription = json_decode($rawSubscription, true);
+                    if (is_array($subscription)) {
+                        try {
+                            PushService::subscribeCustomer($customerId, $subscription);
+                            PushService::notifyCustomer($customerId, $this->buildPushPayload($emailData, "התור שלך נקבע בהצלחה!"));
+                        } catch (Exception $e) {
+                            error_log('Push subscribe on create failed: ' . $e->getMessage());
+                        }
+                    }
+                }
             }
 
             echo json_encode([
                 'success' => true,
                 'appointment_id' => $appointmentId,
-                'token' => $token
+                'token' => $token,
+                'customer_id' => $customerId
             ]);
             
         } catch(Exception $e) {
@@ -307,6 +327,8 @@ class AppointmentController {
             $emailData = $this->getAppointmentEmailData($id);
             if ($emailData) {
                 Mailer::appointmentUpdated($emailData);
+                PushService::notifyCustomer($appointment['customer_id'], $this->buildPushPayload($emailData, "התור שלך עודכן בהצלחה!"));
+                PushService::notifyAdmins($this->buildPushPayload($emailData, "תור עודכן"));
             }
 
             if($this->isAjax()) {
@@ -377,6 +399,8 @@ class AppointmentController {
             $emailData = $this->getAppointmentEmailData($appointmentId);
             if ($emailData) {
                 Mailer::appointmentCancelled($emailData);
+                PushService::notifyCustomer($appointment['customer_id'], $this->buildPushPayload($emailData, "התור שלך בוטל"));
+                PushService::notifyAdmins($this->buildPushPayload($emailData, "תור בוטל"));
             }
 
             echo json_encode(['success' => true]);
@@ -438,6 +462,20 @@ class AppointmentController {
 
         $row['manage_link'] = SITE_URL . "/index.php?controller=booking&action=manage&id={$row['id']}&token={$row['token']}";
         return $row;
+    }
+
+    // Builds the {title, body, url} payload PushService::notify*() expects.
+    private function buildPushPayload(array $appointment, $title) {
+        $body = "{$appointment['service_name']} - " .
+                date('d/m/Y', strtotime($appointment['appointment_date'])) . " " .
+                substr($appointment['appointment_time'], 0, 5) .
+                " | {$appointment['customer_name']}";
+
+        return [
+            'title' => $title,
+            'body' => $body,
+            'url' => $appointment['manage_link'],
+        ];
     }
 
     // Helper function

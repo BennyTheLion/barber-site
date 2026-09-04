@@ -199,6 +199,29 @@ try {
             }
             break;
             
+        // ============ PUSH NOTIFICATIONS (standalone module) ============
+        case 'push':
+            require_once "push/PushController.php";
+            $pushController = new PushController();
+
+            switch($action) {
+                case 'vapidKey':
+                    $pushController->vapidKey();
+                    break;
+                case 'subscribeCustomer':
+                    $pushController->subscribeCustomer();
+                    break;
+                case 'subscribeAdmin':
+                    $pushController->subscribeAdmin();
+                    break;
+                case 'unsubscribe':
+                    $pushController->unsubscribe();
+                    break;
+                default:
+                    http_response_code(404);
+            }
+            break;
+
         // ============ ADMIN PANEL ============
         case 'admin':
             if(file_exists("controllers/AdminController.php")) {

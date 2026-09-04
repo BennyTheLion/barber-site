@@ -91,6 +91,7 @@ $services = $db->query("SELECT * FROM services WHERE is_active = 1")->fetchAll()
     </div>
 </div>
 
+<script src="<?php echo SITE_URL; ?>/assets/js/push-client.js"></script>
 <script>
 // קביעת תאריכים
 const today = new Date();
@@ -188,7 +189,17 @@ document.getElementById('bookingForm').addEventListener('submit', async function
     const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>מזמין תור...';
-    
+
+    // נסה להפעיל התראות פוש (לא חוסם - אם המשתמש דוחה/הדפדפן לא תומך, ממשיכים בלי)
+    if (PushClient.isSupported()) {
+        try {
+            const subscription = await PushClient.subscribe();
+            formData.append('push_subscription', JSON.stringify(subscription));
+        } catch (pushError) {
+            console.log('Push subscribe skipped:', pushError.message);
+        }
+    }
+
     try {
         const response = await fetch('<?php echo SITE_URL; ?>/index.php?controller=booking&action=create', {
             method: 'POST',

@@ -38,6 +38,7 @@ $isDashboardPage = ($currentPage == 'dashboard');
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <script src="<?php echo SITE_URL; ?>/assets/js/push-client.js"></script>
     <style>
         * {
             -webkit-tap-highlight-color: transparent;
@@ -593,10 +594,14 @@ $isDashboardPage = ($currentPage == 'dashboard');
             <div class="top-actions">
                 <div class="datetime">
                     <i class="fas fa-calendar-alt"></i>
-                    <?= date('d/m/Y') ?> | 
+                    <?= date('d/m/Y') ?> |
                     <i class="fas fa-clock"></i>
                     <?= date('H:i') ?>
                 </div>
+                <button class="logout-btn-top" id="enableAdminPushBtn" onclick="enableAdminPushNotifications()" title="קבל התראות על תורים חדשים/עדכונים">
+                    <i class="fas fa-bell"></i>
+                    <span>התראות</span>
+                </button>
                 <button class="logout-btn-top" onclick="if(confirm('האם אתה בטוח שברצונך להתנתק?')) window.location.href='<?php echo SITE_URL; ?>/index.php?url=admin/logout'">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>התנתק</span>
@@ -609,6 +614,27 @@ $isDashboardPage = ($currentPage == 'dashboard');
     </div>
 
     <script>
+    // ========== ADMIN PUSH NOTIFICATIONS ==========
+    async function enableAdminPushNotifications() {
+        const btn = document.getElementById('enableAdminPushBtn');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>מפעיל...</span>';
+
+        try {
+            const result = await PushClient.subscribeAndSaveForAdmin();
+            if (result.success) {
+                btn.innerHTML = '<i class="fas fa-check"></i> <span>התראות פעילות</span>';
+            } else {
+                throw new Error(result.error || 'שגיאה');
+            }
+        } catch (error) {
+            alert('❌ לא ניתן להפעיל התראות: ' + error.message);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // ========== MOBILE MENU ==========
         const menuToggle = document.getElementById('menuToggle');

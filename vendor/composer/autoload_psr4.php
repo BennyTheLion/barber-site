@@ -6,6 +6,26 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'Symfony\\Polyfill\\Php83\\' => array($vendorDir . '/symfony/polyfill-php83'),
+    'Symfony\\Polyfill\\Php82\\' => array($vendorDir . '/symfony/polyfill-php82'),
+    'Symfony\\Polyfill\\Php80\\' => array($vendorDir . '/symfony/polyfill-php80'),
+    'Symfony\\Component\\OptionsResolver\\' => array($vendorDir . '/symfony/options-resolver'),
+    'SpomkyLabs\\Pki\\' => array($vendorDir . '/spomky-labs/pki-framework/src'),
+    'Psr\\Log\\' => array($vendorDir . '/psr/log/src'),
+    'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-factory/src', $vendorDir . '/psr/http-message/src'),
+    'Psr\\Http\\Client\\' => array($vendorDir . '/psr/http-client/src'),
+    'Psr\\Clock\\' => array($vendorDir . '/psr/clock/src'),
+    'Minishlink\\WebPush\\' => array($vendorDir . '/minishlink/web-push/src'),
+    'Jose\\Component\\' => array($vendorDir . '/web-token/jwt-library'),
+    'Http\\Promise\\' => array($vendorDir . '/php-http/promise/src'),
+    'Http\\Message\\' => array($vendorDir . '/php-http/message/src'),
+    'Http\\Discovery\\' => array($vendorDir . '/php-http/discovery/src'),
+    'Http\\Client\\Curl\\' => array($vendorDir . '/php-http/curl-client/src'),
+    'Http\\Client\\' => array($vendorDir . '/php-http/httplug/src'),
+    'GuzzleHttp\\Psr7\\' => array($vendorDir . '/guzzlehttp/psr7/src'),
     'GreenApi\\RestApi\\' => array($vendorDir . '/green-api/whatsapp-api-client-php/src'),
+    'Clue\\StreamFilter\\' => array($vendorDir . '/clue/stream-filter/src'),
+    'Brick\\Math\\' => array($vendorDir . '/brick/math/src'),
+    'Base64Url\\' => array($vendorDir . '/spomky-labs/base64url/src'),
     '' => array($baseDir . '/classes'),
 );
