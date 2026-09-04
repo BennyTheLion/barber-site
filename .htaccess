@@ -1,0 +1,9 @@
+# .htaccess - שים בקובץ root C:\xampp\htdocs\barber-site\.htaccess
+RewriteEngine On
+
+# אם הקובץ או התיקייה קיימים, אל תפנה
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# הפנה הכל ל-index.php
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]

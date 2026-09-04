@@ -1,0 +1,16 @@
+# Secrets / environment-specific config (copy from *.example.php and fill in)
+/config/config.php
+/config/database.php
+
+# Local dev utility that hardcodes a real admin password
+/HashPass.php
+
+# Real production DB dump (customer PII, password hash, live tokens)
+/sql/berber.sql
+
+# Runtime logs
+/logs/*.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
