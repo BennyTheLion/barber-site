@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 /*
  * This file is part of the WebPush library.
  *
@@ -13,7 +16,6 @@ namespace Minishlink\WebPush;
 use Base64Url\Base64Url;
 use Jose\Component\Core\JWK;
 use Jose\Component\Core\Util\Ecc\PublicKey;
-use Psr\Log\LoggerInterface;
 
 class Utils
 {
@@ -56,31 +58,17 @@ class Utils
         ];
     }
 
-    private static function logWarning(string $message, ?LoggerInterface $logger): void
-    {
-        $logger !== null
-            ? $logger->warning($message)
-            : trigger_error($message, E_USER_WARNING);
-    }
-
-    private static function logNotice(string $message, ?LoggerInterface $logger): void
-    {
-        $logger !== null
-            ? $logger->notice($message)
-            : trigger_error($message, E_USER_NOTICE);
-    }
-
     /**
      * Generates user warning/notice if some requirements are not met.
      * Does not throw exception to allow unusual or polyfill environments.
      */
-    public static function checkRequirement(?LoggerInterface $logger = null): void
+    public static function checkRequirement(): void
     {
-        self::checkRequirementExtension($logger);
-        self::checkRequirementKeyCipherHash($logger);
+        self::checkRequirementExtension();
+        self::checkRequirementKeyCipherHash();
     }
 
-    public static function checkRequirementExtension(?LoggerInterface $logger = null): void
+    public static function checkRequirementExtension(): void
     {
         $requiredExtensions = [
             'curl'     => '[WebPush] curl extension is not loaded but is required. You can fix this in your php.ini.',
@@ -89,17 +77,17 @@ class Utils
         ];
         foreach ($requiredExtensions as $extension => $message) {
             if (!extension_loaded($extension)) {
-                self::logWarning($message, $logger);
+                trigger_error($message, E_USER_WARNING);
             }
         }
 
         // Check optional extensions.
-        if (!extension_loaded('bcmath') && !extension_loaded('gmp')) {
-            self::logNotice('It is highly recommended to install the GMP or BCMath extension to speed up calculations. The fastest available calculator implementation will be automatically selected at runtime.', $logger);
+        if (!extension_loaded("bcmath") && !extension_loaded("gmp")) {
+            trigger_error("It is highly recommended to install the GMP or BCMath extension to speed up calculations. The fastest available calculator implementation will be automatically selected at runtime.", E_USER_NOTICE);
         }
     }
 
-    public static function checkRequirementKeyCipherHash(?LoggerInterface $logger = null): void
+    public static function checkRequirementKeyCipherHash(): void
     {
         // Print your current openssl version with: OPENSSL_VERSION_TEXT
         // Check for outdated openssl without EC support.
@@ -108,11 +96,11 @@ class Utils
         ];
         $availableCurves = openssl_get_curve_names();
         if ($availableCurves === false) {
-            self::logWarning('[WebPush] Openssl does not support curves.', $logger);
+            trigger_error('[WebPush] Openssl does not support curves.', E_USER_WARNING);
         } else {
             foreach ($requiredCurves as $curve => $message) {
                 if (!in_array($curve, $availableCurves, true)) {
-                    self::logWarning($message, $logger);
+                    trigger_error($message, E_USER_WARNING);
                 }
             }
         }
@@ -124,7 +112,7 @@ class Utils
         $availableCiphers = openssl_get_cipher_methods();
         foreach ($requiredCiphers as $cipher => $message) {
             if (!in_array($cipher, $availableCiphers, true)) {
-                self::logWarning($message, $logger);
+                trigger_error($message, E_USER_WARNING);
             }
         }
 
@@ -135,7 +123,7 @@ class Utils
         $availableHash = hash_hmac_algos();
         foreach ($requiredHash as $hash => $message) {
             if (!in_array($hash, $availableHash, true)) {
-                self::logWarning($message, $logger);
+                trigger_error($message, E_USER_WARNING);
             }
         }
     }
