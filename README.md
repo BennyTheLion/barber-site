@@ -102,6 +102,14 @@ needed at all (openssl_pkey_new works out of the box there).
 works for local XAMPP testing, but a real deployment needs HTTPS for this feature to work for
 the barber.
 
+**iPhone (iOS Safari) needs one extra step:** iOS only exposes the Push API to a site that has
+been added to the Home Screen (Share → **הוספה למסך הבית** / "Add to Home Screen") — a regular
+Safari tab can't request notification permission at all, no matter what you click. Requires
+iOS 16.4+. After adding it, open the app from its **Home Screen icon** (not from a Safari tab),
+log into the admin panel from there, and only then tap the push-enable button. `manifest.json`
+(with `images/icon-192.png` / `icon-512.png`, generated once via `bin/gen_icons.php`) is what
+makes "Add to Home Screen" produce a proper installed app instead of a plain bookmark.
+
 ## Managing appointments
 **As the barber** — the admin panel's **תורים** tab lists all upcoming bookings. Each one has:
 - **עדכון מועד** — pick a new date, then choose from the real available time slots for that
