@@ -36,32 +36,36 @@ function notify_booking($pdo, $booking, $service, $title, $customerNote) {
 }
 
 if ($method === 'GET') {
-    if (!empty($_SESSION['admin_id'])) {
-        // Admin: list upcoming bookings (including cancelled, shown with status)
+    // A phone param always means the public self-service lookup — checked first and
+    // regardless of session, so a barber who happens to be logged into the admin panel in
+    // the same browser never has this call silently upgraded into the full admin listing
+    // (which would leak every customer's bookings, cancelled ones included).
+    if (isset($_GET['phone'])) {
+        $phone = normalize_phone($_GET['phone']);
+        if (!$phone) json_out(['error' => 'נא להזין מספר טלפון'], 400);
+
         $stmt = $pdo->query(
-            "SELECT b.id, b.customer_name, b.customer_phone, b.customer_email, b.booking_date, b.booking_time, b.status, s.name AS service_name, s.id AS service_id
+            "SELECT b.id, b.customer_name, b.customer_phone, b.booking_date, b.booking_time, b.status, s.name AS service_name, s.duration_minutes, s.id AS service_id
              FROM bookings b JOIN services s ON s.id = b.service_id
-             WHERE b.booking_date >= CURDATE()
+             WHERE b.booking_date >= CURDATE() AND b.status = 'confirmed'
              ORDER BY b.booking_date ASC, b.booking_time ASC"
         );
-        json_out($stmt->fetchAll());
+        $mine = array_values(array_filter($stmt->fetchAll(), function ($b) use ($phone) {
+            return normalize_phone($b['customer_phone']) === $phone;
+        }));
+        foreach ($mine as &$b) { unset($b['customer_phone']); }
+        json_out($mine);
     }
 
-    // Customer self-service: look up their own upcoming, still-confirmed bookings by phone.
-    $phone = normalize_phone($_GET['phone'] ?? '');
-    if (!$phone) json_out(['error' => 'נא להזין מספר טלפון'], 400);
-
+    // Admin: list upcoming bookings (including cancelled, shown with status)
+    require_admin();
     $stmt = $pdo->query(
-        "SELECT b.id, b.customer_name, b.customer_phone, b.booking_date, b.booking_time, b.status, s.name AS service_name, s.duration_minutes, s.id AS service_id
+        "SELECT b.id, b.customer_name, b.customer_phone, b.customer_email, b.booking_date, b.booking_time, b.status, s.name AS service_name, s.id AS service_id
          FROM bookings b JOIN services s ON s.id = b.service_id
-         WHERE b.booking_date >= CURDATE() AND b.status = 'confirmed'
+         WHERE b.booking_date >= CURDATE()
          ORDER BY b.booking_date ASC, b.booking_time ASC"
     );
-    $mine = array_values(array_filter($stmt->fetchAll(), function ($b) use ($phone) {
-        return normalize_phone($b['customer_phone']) === $phone;
-    }));
-    foreach ($mine as &$b) { unset($b['customer_phone']); }
-    json_out($mine);
+    json_out($stmt->fetchAll());
 }
 
 if ($method === 'POST') {

@@ -67,6 +67,8 @@ $loggedIn = !empty($_SESSION['admin_id']);
     </div>
   </div>
 
+  <div class="wrap">
+
   <div style="padding:16px 20px 4px;">
     <button id="push-toggle-btn" class="btn btn-ghost" style="width:100%; font-size:13.5px;">🔕 הפעלת התראות דחיפה למכשיר זה</button>
   </div>
@@ -182,6 +184,8 @@ $loggedIn = !empty($_SESSION['admin_id']);
     <div class="field"><label>תקנון האתר</label><textarea id="s-terms" rows="10"></textarea></div>
     <button class="btn btn-primary" onclick="saveSettings()">שמירה</button>
   </div>
+
+  </div><!-- /.wrap -->
 
   <script>var VAPID_PUBLIC_KEY = <?= json_encode(VAPID_PUBLIC_KEY) ?>;</script>
   <script src="assets/admin.js"></script>
