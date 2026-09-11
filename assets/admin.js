@@ -22,8 +22,20 @@ function adminLogout() {
 }
 
 function showTab(tab) {
-  document.querySelectorAll('.admin-tab').forEach(function (t) { t.classList.toggle('active', t.dataset.tab === tab); });
+  var item = document.querySelector('.admin-menu-item[data-tab="' + tab + '"]');
+  document.querySelectorAll('.admin-menu-item').forEach(function (t) { t.classList.toggle('active', t.dataset.tab === tab); });
   document.querySelectorAll('.admin-section').forEach(function (p) { p.classList.toggle('hidden', p.dataset.panel !== tab); });
+  if (item) document.getElementById('admin-current-tab').textContent = item.textContent;
+  closeAdminMenu();
+}
+
+function toggleAdminMenu() {
+  var open = document.getElementById('admin-menu-dropdown').classList.toggle('hidden') === false;
+  document.getElementById('admin-menu-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function closeAdminMenu() {
+  document.getElementById('admin-menu-dropdown').classList.add('hidden');
+  document.getElementById('admin-menu-btn').setAttribute('aria-expanded', 'false');
 }
 
 /* ── Settings ────────────────────────────────────────────────────────── */

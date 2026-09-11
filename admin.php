@@ -73,14 +73,21 @@ $loggedIn = !empty($_SESSION['admin_id']);
     <button id="push-toggle-btn" class="btn btn-ghost" style="width:100%; font-size:13.5px;">🔕 הפעלת התראות דחיפה למכשיר זה</button>
   </div>
 
-  <div class="admin-tabs">
-    <div class="admin-tab active" data-tab="settings" onclick="showTab('settings')">פרטי עסק</div>
-    <div class="admin-tab" data-tab="hours" onclick="showTab('hours')">שעות פעילות</div>
-    <div class="admin-tab" data-tab="services" onclick="showTab('services')">שירותים</div>
-    <div class="admin-tab" data-tab="gallery" onclick="showTab('gallery')">גלריה</div>
-    <div class="admin-tab" data-tab="bookings" onclick="showTab('bookings')">תורים</div>
-    <div class="admin-tab" data-tab="mail" onclick="showTab('mail')">מייל</div>
-    <div class="admin-tab" data-tab="legal" onclick="showTab('legal')">מסמכים משפטיים</div>
+  <div class="admin-menu-bar">
+    <button class="icon-btn" id="admin-menu-btn" onclick="toggleAdminMenu()" aria-label="תפריט" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="admin-current-tab" id="admin-current-tab">פרטי עסק</div>
+  </div>
+
+  <div class="admin-menu-dropdown hidden" id="admin-menu-dropdown">
+    <div class="admin-menu-item active" data-tab="settings" onclick="showTab('settings')">פרטי עסק</div>
+    <div class="admin-menu-item" data-tab="hours" onclick="showTab('hours')">שעות פעילות</div>
+    <div class="admin-menu-item" data-tab="services" onclick="showTab('services')">שירותים</div>
+    <div class="admin-menu-item" data-tab="gallery" onclick="showTab('gallery')">גלריה</div>
+    <div class="admin-menu-item" data-tab="bookings" onclick="showTab('bookings')">תורים</div>
+    <div class="admin-menu-item" data-tab="mail" onclick="showTab('mail')">מייל</div>
+    <div class="admin-menu-item" data-tab="legal" onclick="showTab('legal')">מסמכים משפטיים</div>
   </div>
 
   <!-- SETTINGS -->
