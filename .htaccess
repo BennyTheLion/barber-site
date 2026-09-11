@@ -1,0 +1,7 @@
+# Block direct HTTP access to files that should only ever be read by PHP includes/CLI,
+# never fetched directly — defense in depth in case PHP execution is ever misconfigured.
+<FilesMatch "^(config(\.example)?\.php|composer\.(json|lock)|database\.sql|migrate_.*\.sql)$">
+  Require all denied
+</FilesMatch>
+
+Options -Indexes
