@@ -1,0 +1,190 @@
+<?php
+require __DIR__ . '/config.php';
+$loggedIn = !empty($_SESSION['admin_id']);
+?>
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>פאנל ניהול — LINE.</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<?php if (!$loggedIn): ?>
+  <div style="display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px;">
+    <div class="card" style="max-width:360px; width:100%; padding:26px 22px;">
+      <div style="font-size:19px; font-weight:800; margin-bottom:18px;">כניסת מנהל</div>
+      <div class="field"><label>שם משתמש</label><input type="text" id="login-username"></div>
+      <div class="field">
+        <label>סיסמה</label>
+        <div class="password-wrap">
+          <input type="password" id="login-password">
+          <button type="button" class="password-toggle" onclick="togglePasswordVisibility('login-password', this)" aria-label="הצג/הסתר סיסמה">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="login-error" style="color:oklch(0.6 0.19 25); font-size:13px; margin-bottom:12px;"></div>
+      <button class="btn btn-primary" onclick="adminLogin()">כניסה</button>
+      <a href="index.php" style="display:block; text-align:center; margin-top:14px; font-size:13.5px;">חזרה לאתר</a>
+    </div>
+  </div>
+  <script>
+    function togglePasswordVisibility(inputId, btn) {
+      var input = document.getElementById(inputId);
+      var isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      btn.innerHTML = isHidden
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-7-11-7a21.6 21.6 0 015.06-6.06M9.9 4.24A10.94 10.94 0 0112 4c7 0 11 7 11 7a21.6 21.6 0 01-3.22 4.34M1 1l22 22"/><path d="M14.12 14.12a3 3 0 11-4.24-4.24"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+    }
+    function adminLogin() {
+      var username = document.getElementById('login-username').value.trim();
+      var password = document.getElementById('login-password').value;
+      fetch('api/login.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:username, password:password}) })
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+          if (res.ok) location.reload();
+          else document.getElementById('login-error').textContent = res.data.error || 'שגיאה';
+        });
+    }
+  </script>
+
+<?php else: ?>
+
+  <div class="site-header">
+    <div class="brand"><span class="logo-dot">●</span> פאנל ניהול</div>
+    <div style="display:flex; gap:8px;">
+      <a href="index.php" class="icon-btn" aria-label="לאתר" title="לאתר">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+      </a>
+      <button class="icon-btn" onclick="adminLogout()" aria-label="יציאה" title="יציאה">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div style="padding:10px 20px 0;">
+    <button id="push-toggle-btn" class="btn btn-ghost" style="width:100%; font-size:13.5px;">🔕 הפעלת התראות דחיפה למכשיר זה</button>
+  </div>
+
+  <div class="admin-tabs">
+    <div class="admin-tab active" data-tab="settings" onclick="showTab('settings')">פרטי עסק</div>
+    <div class="admin-tab" data-tab="hours" onclick="showTab('hours')">שעות פעילות</div>
+    <div class="admin-tab" data-tab="services" onclick="showTab('services')">שירותים</div>
+    <div class="admin-tab" data-tab="gallery" onclick="showTab('gallery')">גלריה</div>
+    <div class="admin-tab" data-tab="bookings" onclick="showTab('bookings')">תורים</div>
+    <div class="admin-tab" data-tab="mail" onclick="showTab('mail')">מייל</div>
+    <div class="admin-tab" data-tab="legal" onclick="showTab('legal')">מסמכים משפטיים</div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="admin-section" data-panel="settings">
+    <div class="field"><label>שם בעל העסק</label><input type="text" id="s-owner-name"></div>
+    <div class="field"><label>תיאור קצר</label><input type="text" id="s-tagline"></div>
+    <div class="field"><label>טלפון</label><input type="tel" id="s-phone" placeholder="050-0000000"></div>
+    <div class="field"><label>מספר וואטסאפ (עם קידומת מדינה, לדוגמה 9725...)</label><input type="tel" id="s-whatsapp"></div>
+    <div class="field"><label>אימייל</label><input type="email" id="s-email"></div>
+    <div class="field"><label>כתובת</label><input type="text" id="s-address"></div>
+    <div class="field"><label>קישור אינסטגרם</label><input type="url" id="s-instagram" placeholder="https://instagram.com/..."></div>
+    <div class="field"><label>קישור פייסבוק</label><input type="url" id="s-facebook" placeholder="https://facebook.com/..."></div>
+    <div class="field"><label>קישור טיקטוק</label><input type="url" id="s-tiktok" placeholder="https://tiktok.com/@..."></div>
+    <button class="btn btn-primary" onclick="saveSettings()">שמירה</button>
+  </div>
+
+  <!-- WORKING HOURS -->
+  <div class="admin-section hidden" data-panel="hours">
+    <div class="field"><label>משך כל משבצת זמן (בדקות)</label><input type="number" id="s-interval" min="5" step="5" value="30"></div>
+    <div id="hours-editor"></div>
+    <button class="btn btn-primary" onclick="saveSettings()">שמירה</button>
+  </div>
+
+  <!-- SERVICES -->
+  <div class="admin-section hidden" data-panel="services">
+    <div id="services-list" style="margin-bottom:20px;"></div>
+    <div class="card" style="padding:16px;">
+      <div class="section-title">הוספת / עריכת שירות</div>
+      <input type="hidden" id="svc-id">
+      <div class="field"><label>שם השירות</label><input type="text" id="svc-name"></div>
+      <div class="field"><label>משך (בדקות)</label><input type="number" id="svc-duration" min="5" value="30"></div>
+      <div class="field"><label>מחיר (טקסט חופשי, אפשר להשאיר ריק)</label><input type="text" id="svc-price"></div>
+      <button class="btn btn-primary" onclick="saveService()">שמירת שירות</button>
+      <button class="btn btn-ghost" style="margin-top:8px;" onclick="resetServiceForm()">שירות חדש</button>
+    </div>
+  </div>
+
+  <!-- GALLERY -->
+  <div class="admin-section hidden" data-panel="gallery">
+    <div class="section-title">תמונות (מקסימום 20)</div>
+    <label class="upload-box" for="image-upload">לחצו להעלאת תמונה (JPG/PNG/WEBP)</label>
+    <input type="file" id="image-upload" accept="image/*" multiple class="hidden" onchange="uploadMedia('image', this)">
+    <div id="image-grid" class="media-grid"></div>
+
+    <div class="section-title" style="margin-top:26px;">סרטונים (מקסימום 5)</div>
+    <label class="upload-box" for="video-upload">לחצו להעלאת סרטון (MP4/WEBM/MOV)</label>
+    <input type="file" id="video-upload" accept="video/*" class="hidden" onchange="uploadMedia('video', this)">
+    <div id="video-grid" class="media-grid"></div>
+  </div>
+
+  <!-- BOOKINGS -->
+  <div class="admin-section hidden" data-panel="bookings">
+    <div id="bookings-list"></div>
+  </div>
+
+  <!-- MAIL -->
+  <div class="admin-section hidden" data-panel="mail">
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="s-mail-enabled" style="width:auto;"> שליחת מיילים פעילה
+      </label>
+    </div>
+    <div style="font-size:12.5px;color:oklch(0.94 0.006 260 / 0.5);margin-bottom:16px;line-height:1.6;">
+      כדי לשלוח מיילים אמיתיים דרך XAMPP, מומלץ להשתמש בחשבון Gmail עם "סיסמת אפליקציה" (App Password).
+      Host: smtp.gmail.com, פורט: 587, אבטחה: tls.
+    </div>
+    <div class="field"><label>אימייל לקבלת הודעות תור חדש (הספר)</label><input type="email" id="s-admin-email" placeholder="barber@example.com"></div>
+    <div class="field"><label>SMTP Host</label><input type="text" id="s-smtp-host" placeholder="smtp.gmail.com"></div>
+    <div class="field"><label>SMTP Port</label><input type="number" id="s-smtp-port" placeholder="587"></div>
+    <div class="field"><label>SMTP Username</label><input type="text" id="s-smtp-username"></div>
+    <div class="field"><label>SMTP Password (App Password)</label>
+      <div class="password-wrap">
+        <input type="password" id="s-smtp-password">
+        <button type="button" class="password-toggle" onclick="togglePasswordVisibility('s-smtp-password', this)" aria-label="הצג/הסתר">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="field">
+      <label>סוג אבטחה</label>
+      <select id="s-smtp-secure">
+        <option value="tls">TLS</option>
+        <option value="ssl">SSL</option>
+      </select>
+    </div>
+    <div class="field"><label>כתובת "שולח" (From)</label><input type="email" id="s-smtp-from-email"></div>
+    <div class="field"><label>שם "שולח" (From Name)</label><input type="text" id="s-smtp-from-name" placeholder="LINE."></div>
+    <button class="btn btn-primary" onclick="saveSettings()">שמירה</button>
+
+    <div style="margin-top:24px; padding-top:20px; border-top:1px solid oklch(0.94 0.006 260 / 0.1);">
+      <div class="section-title">בדיקת שליחה</div>
+      <div class="field"><label>שלח מייל בדיקה אל</label><input type="email" id="test-mail-to" placeholder="you@example.com"></div>
+      <button class="btn btn-ghost" onclick="sendTestMail()">שליחת מייל בדיקה</button>
+      <div id="test-mail-result" style="font-size:13px; margin-top:10px; line-height:1.6;"></div>
+    </div>
+  </div>
+
+  <!-- LEGAL -->
+  <div class="admin-section hidden" data-panel="legal">
+    <div class="field"><label>מדיניות פרטיות</label><textarea id="s-privacy" rows="10"></textarea></div>
+    <div class="field"><label>תקנון האתר</label><textarea id="s-terms" rows="10"></textarea></div>
+    <button class="btn btn-primary" onclick="saveSettings()">שמירה</button>
+  </div>
+
+  <script>var VAPID_PUBLIC_KEY = <?= json_encode(VAPID_PUBLIC_KEY) ?>;</script>
+  <script src="assets/admin.js"></script>
+<?php endif; ?>
+</body>
+</html>

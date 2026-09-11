@@ -1,0 +1,153 @@
+# LINE. — Booking App (PHP + MySQL, for XAMPP)
+
+## 1. Install the files
+Copy the whole `booking-app` folder into your XAMPP `htdocs` folder, e.g.:
+```
+C:\xampp\htdocs\booking-app
+```
+
+## 2. Create the database
+1. Start **Apache** and **MySQL** in the XAMPP control panel.
+2. Open **phpMyAdmin** (`http://localhost/phpmyadmin`).
+3. Click **Import**, choose `database.sql`, and run it.
+   This creates the `booking_app` database with all tables and seed data.
+
+Copy `config.example.php` to `config.php` (gitignored — it holds real secrets: DB password,
+VAPID push private key). It already assumes the default XAMPP MySQL login (`root` / no
+password, `localhost`); if your setup differs, edit the constants at the top.
+
+## 3. Create your admin account
+Visit:
+```
+http://localhost/booking-app/setup.php
+```
+Create your username + password. **Delete `setup.php` from the server afterwards** — it only
+works once (while no admin exists) but it's good practice to remove it.
+
+## 4. Open the site
+```
+http://localhost/booking-app/index.php
+```
+Log in from the header (person icon) to reach `admin.php`, where you can:
+- Edit business info: phone, WhatsApp number, email, address, Instagram/Facebook/TikTok links
+- Set working hours per weekday (and the slot length in minutes) — the public booking
+  calendar and available time slots are generated automatically from these hours
+- Add/edit/delete services (name, duration, price)
+- Upload photos (max 20) and videos (max 5) for the galleries — the video gallery
+  automatically stays hidden on the site if no videos have been uploaded
+- View upcoming booked appointments
+- Edit the Privacy Policy and Terms text shown at `privacy.php` / `terms.php`
+
+## Upgrading an existing installation
+If you already had this app running and just replaced the files, run `migrate_v2.sql` then
+`migrate_v3.sql` in phpMyAdmin (SQL tab) on the `booking_app` database — they add the
+columns/settings needed for email notifications, booking cancel/reschedule, and push
+notifications, respectively. Skip both on a brand-new install; `database.sql` already includes
+everything.
+
+## Email notifications (booking confirmations, cancellations, reschedules)
+Emails are sent via SMTP (XAMPP's local `mail()` function doesn't work without extra setup,
+so this uses the PHPMailer library instead — already bundled in `vendor/phpmailer/`, no
+Composer needed).
+
+In the admin panel → **מייל** tab:
+1. Check "שליחת מיילים פעילה" to turn mail on (it's off by default, so nothing tries to send
+   until you've configured it).
+2. Set the barber's notification email address.
+3. Fill in SMTP details. The easiest option is a Gmail account with an **App Password**
+   (Google Account → Security → 2-Step Verification → App Passwords — different from your
+   normal Gmail password):
+   - Host: `smtp.gmail.com`
+   - Port: `587`
+   - Security: `TLS`
+   - Username: your Gmail address
+   - Password: the 16-character App Password
+   - From email: your Gmail address
+
+Once configured, every new booking emails both the customer (if they gave an email) and the
+barber. Cancelling or rescheduling a booking from the admin panel's **תורים** tab emails both
+sides again.
+
+## Push notifications (barber gets notified instantly on new/changed bookings)
+In addition to email, the barber can get a real browser/OS push notification — on desktop or
+phone — the moment a customer books, cancels, or reschedules, even if the admin panel tab
+isn't open.
+
+This feature uses the `minishlink/web-push` library (installed via Composer — the one
+exception to this project's "no Composer needed" approach, because push messages must be
+encrypted per the Web Push spec (RFC 8291), which isn't practical to hand-roll safely).
+
+**Setup (already done for this install, keep for reference):**
+1. `composer install` — pulls in `vendor/minishlink/web-push` and its dependencies.
+2. Generate a VAPID key pair once: `php bin/gen_vapid.php`, then paste the two keys into
+   `config.php` (`VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`).
+3. Run `migrate_v3.sql` (or use the updated `database.sql` on a fresh install) — adds the
+   `push_subscriptions` table.
+
+**Enabling it as the barber:** open the admin panel → click **"הפעלת התראות דחיפה למכשיר זה"**
+near the top → allow the browser's notification permission prompt. Repeat on every device you
+want notified (phone + desktop, for example). Click the button again to turn it off on that
+device.
+
+**Windows/XAMPP quirk this app works around:** `openssl_pkey_new()` (needed to encrypt each
+push message) can't find OpenSSL's config file under Apache/mod_php or plain CLI on Windows —
+it fails silently. `includes/push.php` works around this by sending each push from a short-lived
+PHP CLI subprocess (`bin/push_worker.php`) launched with `OPENSSL_CONF` set explicitly in that
+subprocess's environment (auto-detected in `config.php` as `OPENSSL_CNF_PATH`). If pushes ever
+stop working after moving the app to a different machine, check that a candidate `openssl.cnf`
+path in `config.php` actually exists there — on Linux hosting this workaround usually isn't
+needed at all (openssl_pkey_new works out of the box there).
+
+**Note:** browsers only allow push subscriptions on `https://` or `http://localhost` — this
+works for local XAMPP testing, but a real deployment needs HTTPS for this feature to work for
+the barber.
+
+## Managing appointments
+The **תורים** tab lists all upcoming bookings. Each one has:
+- **עדכון מועד** — change the date/time (checked against other bookings so you can't
+  double-book), sends an "updated" email to both sides.
+- **ביטול תור** — cancels it (kept in the list, greyed out, marked "בוטל" — not deleted),
+  sends a "cancelled" email to both sides. Its slot becomes bookable again immediately.
+
+Only genuinely open time slots are ever shown to customers on the public site — taken and
+cancelled-then-reopened slots are computed server-side, so there's nothing for a customer to
+accidentally pick that isn't actually available.
+
+## Notes on uploads
+- Images are automatically resized (max width 1600px) and compressed to keep file sizes
+  reasonable; allowed formats: JPG, PNG, WEBP.
+- Videos are size-limited (default 60MB) and format-limited (MP4, WEBM, MOV) but are **not**
+  re-compressed (that needs FFmpeg, which isn't included) — ask clients to send reasonably
+  sized clips.
+- If uploads bigger than a few MB are rejected outright by PHP itself, increase these values
+  in `php.ini` (in XAMPP: `xampp/php/php.ini`) and restart Apache:
+  ```
+  upload_max_filesize = 64M
+  post_max_size = 64M
+  ```
+
+## Security notes before going live
+- Change the default `config.php` DB credentials if you move off `root`/no-password.
+- Serve the site over HTTPS in production.
+- The `images/` and `videos/` folders already block `.php` execution via `.htaccess`
+  so uploaded files can't be used to run code on your server.
+- Consider adding login rate-limiting if the admin login will be internet-facing.
+
+## File map
+```
+index.php            Public site (header, gallery, working hours, booking, footer, WhatsApp, accessibility)
+admin.php             Admin login + dashboard
+privacy.php / terms.php   Legal pages (editable from admin panel)
+setup.php              One-time admin account creation (delete after use)
+config.php             DB connection + shared settings (incl. VAPID keys for push)
+database.sql           Schema + seed data
+sw.js                   Service worker — shows the push notification, handles its click
+bin/gen_vapid.php       One-time: generate a VAPID key pair for push
+bin/push_worker.php     Sends push notifications (run as a subprocess by includes/push.php)
+includes/push.php       Push-sending helper, called from api/booking.php
+api/                    JSON endpoints used by the front end
+assets/style.css        All styling (original design preserved + new components)
+assets/app.js           Public site behaviour
+assets/admin.js         Admin dashboard behaviour
+images/ , videos/       Uploaded media (protected by .htaccess)
+```
