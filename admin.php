@@ -9,7 +9,7 @@ $loggedIn = !empty($_SESSION['admin_id']);
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>פאנל ניהול — LINE.</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=<?= @filemtime(__DIR__ . '/assets/style.css') ?>">
 </head>
 <body>
 
@@ -195,7 +195,7 @@ $loggedIn = !empty($_SESSION['admin_id']);
   </div><!-- /.wrap -->
 
   <script>var VAPID_PUBLIC_KEY = <?= json_encode(VAPID_PUBLIC_KEY) ?>;</script>
-  <script src="assets/admin.js"></script>
+  <script src="assets/admin.js?v=<?= @filemtime(__DIR__ . '/assets/admin.js') ?>"></script>
 <?php endif; ?>
 </body>
 </html>

@@ -11,7 +11,7 @@ $text = $stmt->fetchColumn() ?: '';
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>מדיניות פרטיות — LINE.</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=<?= @filemtime(__DIR__ . '/assets/style.css') ?>">
 </head>
 <body>
 <div class="site-header"><div class="brand">מדיניות פרטיות</div><a href="index.php" class="icon-btn">✕</a></div>

@@ -260,3 +260,29 @@ html.a11y-font-xl body { font-size: 128%; }
 .day-row input[type=time] { flex:1; padding:9px; border-radius:8px; background:oklch(0.16 0.008 260); border:1px solid oklch(0.94 0.006 260 / 0.15); color:inherit; font-size:14px; }
 .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:oklch(0.85 0.19 145); color:oklch(0.14 0.01 260); padding:12px 20px; border-radius:12px; font-weight:700; font-size:14px; z-index:80; }
 .booking-row { display:flex; justify-content:space-between; align-items:center; padding:12px; border-radius:12px; background:oklch(0.16 0.008 260); margin-bottom:8px; font-size:13.5px; }
+
+/* ── Desktop ──────────────────────────────────────────────────────────
+   Everything above is written mobile-first (the .wrap column IS the layout).
+   From here we widen that same column for larger screens rather than building
+   a separate desktop layout, so every page benefits automatically — and the
+   admin hamburger menu becomes a plain inline tab row once there's room for it. */
+@media (min-width: 700px) {
+  .wrap { max-width: 640px; }
+
+  #admin-menu-btn { display: none; }
+  .admin-menu-dropdown {
+    display: flex !important; flex-direction: row; flex-wrap: wrap; gap: 8px;
+    background: transparent; border: none; padding: 0; margin: 0 16px 20px;
+  }
+  .admin-menu-item { flex: 0 0 auto; background: oklch(0.94 0.006 260 / 0.08); }
+  .admin-menu-item:hover { background: oklch(0.94 0.006 260 / 0.14); }
+  .admin-menu-item.active:hover { background: oklch(0.85 0.19 145); }
+
+  .btn, .chip, .slot { cursor: pointer; }
+  .btn:hover:not(:disabled) { filter: brightness(1.08); }
+  .chip:hover, .icon-btn:hover { background: oklch(0.94 0.006 260 / 0.14); }
+}
+
+@media (min-width: 1000px) {
+  .wrap { max-width: 760px; }
+}
