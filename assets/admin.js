@@ -252,24 +252,13 @@ function loadBookings() {
           '<button class="btn btn-sm btn-ghost" data-resched="' + b.id + '">עדכון מועד</button>' +
           '<button class="btn btn-sm btn-danger" data-cancel="' + b.id + '">ביטול תור</button>' +
           '</div>' +
-          '<div class="hidden" id="resched-form-' + b.id + '" style="display:flex;gap:8px;margin-top:10px;">' +
-          '<input type="date" id="resched-date-' + b.id + '" value="' + b.booking_date + '" style="flex:1;padding:9px;border-radius:8px;background:oklch(0.16 0.008 260);border:1px solid oklch(0.94 0.006 260 / 0.15);color:inherit;font-size:14px;">' +
-          '<input type="time" id="resched-time-' + b.id + '" value="' + b.booking_time.slice(0, 5) + '" style="flex:1;padding:9px;border-radius:8px;background:oklch(0.16 0.008 260);border:1px solid oklch(0.94 0.006 260 / 0.15);color:inherit;font-size:14px;">' +
-          '<button class="btn btn-sm btn-primary" data-save-resched="' + b.id + '">שמירה</button>' +
-          '</div>'
+          '<div class="hidden" id="resched-form-' + b.id + '" style="margin-top:12px;"></div>'
         );
       list.appendChild(row);
 
       if (!cancelled) {
         row.querySelector('[data-cancel]').onclick = function () { cancelBooking(b.id); };
-        row.querySelector('[data-resched]').onclick = function () {
-          document.getElementById('resched-form-' + b.id).classList.toggle('hidden');
-        };
-        row.querySelector('[data-save-resched]').onclick = function () {
-          rescheduleBooking(b.id,
-            document.getElementById('resched-date-' + b.id).value,
-            document.getElementById('resched-time-' + b.id).value);
-        };
+        row.querySelector('[data-resched]').onclick = function () { toggleReschedule(b); };
       }
     });
   });
@@ -280,6 +269,66 @@ function cancelBooking(id) {
   api('api/booking.php', { method: 'PUT', body: JSON.stringify({ id: id, action: 'cancel' }) }).then(function (res) {
     if (res.ok) { toast('התור בוטל'); loadBookings(); } else toast(res.data.error || 'שגיאה');
   });
+}
+
+// Calendar-based reschedule: pick a date, then only genuinely open slots (via availability.php,
+// excluding this booking's own current slot) are offered — same UX as the public booking flow.
+function toggleReschedule(b) {
+  var container = document.getElementById('resched-form-' + b.id);
+  if (!container.classList.contains('hidden')) { container.classList.add('hidden'); container.innerHTML = ''; return; }
+  container.classList.remove('hidden');
+  container.innerHTML =
+    '<div class="field"><label>תאריך חדש</label><input type="date" id="resched-date-' + b.id + '"></div>' +
+    '<div class="section-title">שעות פנויות</div>' +
+    '<div id="resched-slots-' + b.id + '" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;"></div>' +
+    '<button class="btn btn-primary btn-sm" style="margin-top:12px;" id="resched-save-' + b.id + '" disabled>שמירה</button>';
+
+  var dateInput = document.getElementById('resched-date-' + b.id);
+  var today = new Date();
+  dateInput.min = today.toISOString().slice(0, 10);
+  dateInput.max = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
+  dateInput.value = b.booking_date;
+
+  var chosenTime = null;
+  var saveBtn = document.getElementById('resched-save-' + b.id);
+
+  function loadSlots() {
+    var slotsEl = document.getElementById('resched-slots-' + b.id);
+    slotsEl.innerHTML = '<div style="grid-column:1/-1;font-size:13px;color:oklch(0.94 0.006 260 / 0.5);">טוען שעות...</div>';
+    chosenTime = null;
+    saveBtn.disabled = true;
+    api('api/availability.php?date=' + dateInput.value + '&service_id=' + b.service_id + '&exclude_booking_id=' + b.id).then(function (res) {
+      var slots = (res.data && res.data.slots) || [];
+      slotsEl.innerHTML = '';
+      if (!slots.length) {
+        slotsEl.innerHTML = '<div style="grid-column:1/-1;font-size:13.5px;color:oklch(0.94 0.006 260 / 0.5);">אין שעות פנויות בתאריך זה</div>';
+        return;
+      }
+      var currentTime = b.booking_time.slice(0, 5);
+      slots.forEach(function (s) {
+        var isCurrent = dateInput.value === b.booking_date && s.time === currentTime;
+        var div = document.createElement('div');
+        div.className = 'slot' + (isCurrent ? ' selected' : '');
+        div.textContent = s.time;
+        div.onclick = function () {
+          chosenTime = s.time;
+          Array.prototype.forEach.call(slotsEl.children, function (el) { el.classList.remove('selected'); });
+          div.classList.add('selected');
+          saveBtn.disabled = false;
+        };
+        slotsEl.appendChild(div);
+        if (isCurrent) { chosenTime = s.time; saveBtn.disabled = false; }
+      });
+    });
+  }
+
+  dateInput.addEventListener('change', loadSlots);
+  loadSlots();
+
+  saveBtn.onclick = function () {
+    if (!chosenTime) return;
+    rescheduleBooking(b.id, dateInput.value, chosenTime);
+  };
 }
 
 function rescheduleBooking(id, date, time) {

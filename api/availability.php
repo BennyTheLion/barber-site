@@ -3,6 +3,7 @@ require __DIR__ . '/../config.php';
 
 $date = $_GET['date'] ?? '';
 $serviceId = (int) ($_GET['service_id'] ?? 0);
+$excludeBookingId = (int) ($_GET['exclude_booking_id'] ?? 0);
 
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !$serviceId) {
     json_out(['error' => 'date (YYYY-MM-DD) and service_id are required'], 400);
@@ -44,12 +45,13 @@ $closeTime->setTime($closeH, $closeM);
 
 // Existing bookings for that date, with their service durations, to detect overlap.
 // Cancelled bookings free up their slot again.
-$stmt = $pdo->prepare(
-    'SELECT b.booking_time, s.duration_minutes FROM bookings b
-     JOIN services s ON s.id = b.service_id
-     WHERE b.booking_date = ? AND b.status = "confirmed"'
-);
-$stmt->execute([$date]);
+$sql = 'SELECT b.booking_time, s.duration_minutes FROM bookings b
+        JOIN services s ON s.id = b.service_id
+        WHERE b.booking_date = ? AND b.status = "confirmed"';
+$params = [$date];
+if ($excludeBookingId) { $sql .= ' AND b.id != ?'; $params[] = $excludeBookingId; }
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $existing = $stmt->fetchAll();
 
 $busyRanges = [];

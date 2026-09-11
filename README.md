@@ -103,15 +103,23 @@ works for local XAMPP testing, but a real deployment needs HTTPS for this featur
 the barber.
 
 ## Managing appointments
-The **תורים** tab lists all upcoming bookings. Each one has:
-- **עדכון מועד** — change the date/time (checked against other bookings so you can't
-  double-book), sends an "updated" email to both sides.
-- **ביטול תור** — cancels it (kept in the list, greyed out, marked "בוטל" — not deleted),
-  sends a "cancelled" email to both sides. Its slot becomes bookable again immediately.
+**As the barber** — the admin panel's **תורים** tab lists all upcoming bookings. Each one has:
+- **עדכון מועד** — pick a new date, then choose from the real available time slots for that
+  service (the current slot itself is always offered, even though it's "taken" by this same
+  booking). Checked server-side against other bookings so you can't double-book.
+- **ביטול תור** — cancels it (kept in the list, greyed out, marked "בוטל" — not deleted).
 
-Only genuinely open time slots are ever shown to customers on the public site — taken and
-cancelled-then-reopened slots are computed server-side, so there's nothing for a customer to
-accidentally pick that isn't actually available.
+Both send an email/push notification to both sides.
+
+**As the customer** — on the public site, the **"ניהול תור קיים"** card (below the booking form)
+lets anyone look up their own upcoming bookings by the phone number they booked with, then
+cancel or reschedule the same way (calendar + real available slots). This is intentionally
+lightweight (no accounts/passwords) — phone-number lookup, matching the rest of the app's
+no-signup design; the server double-checks the phone before allowing any change.
+
+Only genuinely open time slots are ever shown — taken and cancelled-then-reopened slots are
+computed server-side (`api/availability.php`), so there's nothing anyone can accidentally pick
+that isn't actually available.
 
 ## Notes on uploads
 - Images are automatically resized (max width 1600px) and compressed to keep file sizes

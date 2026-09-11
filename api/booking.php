@@ -5,6 +5,11 @@ require __DIR__ . '/../includes/push.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Phones are compared digits-only so "050-1234567" / "0501234567" / "+972501234567" all match.
+function normalize_phone($phone) {
+    return preg_replace('/\D/', '', (string) $phone);
+}
+
 function notify_booking($pdo, $booking, $service, $title, $customerNote) {
     $rows = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('owner_name','admin_notification_email','email')")->fetchAll();
     $s = [];
@@ -31,15 +36,32 @@ function notify_booking($pdo, $booking, $service, $title, $customerNote) {
 }
 
 if ($method === 'GET') {
-    // Admin: list upcoming bookings (including cancelled, shown with status)
-    require_admin();
+    if (!empty($_SESSION['admin_id'])) {
+        // Admin: list upcoming bookings (including cancelled, shown with status)
+        $stmt = $pdo->query(
+            "SELECT b.id, b.customer_name, b.customer_phone, b.customer_email, b.booking_date, b.booking_time, b.status, s.name AS service_name, s.id AS service_id
+             FROM bookings b JOIN services s ON s.id = b.service_id
+             WHERE b.booking_date >= CURDATE()
+             ORDER BY b.booking_date ASC, b.booking_time ASC"
+        );
+        json_out($stmt->fetchAll());
+    }
+
+    // Customer self-service: look up their own upcoming, still-confirmed bookings by phone.
+    $phone = normalize_phone($_GET['phone'] ?? '');
+    if (!$phone) json_out(['error' => 'נא להזין מספר טלפון'], 400);
+
     $stmt = $pdo->query(
-        "SELECT b.id, b.customer_name, b.customer_phone, b.customer_email, b.booking_date, b.booking_time, b.status, s.name AS service_name, s.id AS service_id
+        "SELECT b.id, b.customer_name, b.customer_phone, b.booking_date, b.booking_time, b.status, s.name AS service_name, s.duration_minutes, s.id AS service_id
          FROM bookings b JOIN services s ON s.id = b.service_id
-         WHERE b.booking_date >= CURDATE()
+         WHERE b.booking_date >= CURDATE() AND b.status = 'confirmed'
          ORDER BY b.booking_date ASC, b.booking_time ASC"
     );
-    json_out($stmt->fetchAll());
+    $mine = array_values(array_filter($stmt->fetchAll(), function ($b) use ($phone) {
+        return normalize_phone($b['customer_phone']) === $phone;
+    }));
+    foreach ($mine as &$b) { unset($b['customer_phone']); }
+    json_out($mine);
 }
 
 if ($method === 'POST') {
@@ -94,7 +116,7 @@ if ($method === 'POST') {
 }
 
 if ($method === 'PUT') {
-    require_admin();
+    $isAdmin = !empty($_SESSION['admin_id']);
     $input = body_json();
     $id = (int) ($input['id'] ?? 0);
     $action = $input['action'] ?? '';
@@ -107,6 +129,15 @@ if ($method === 'PUT') {
     $stmt->execute([$id]);
     $booking = $stmt->fetch();
     if (!$booking) json_out(['error' => 'תור לא נמצא'], 404);
+
+    // Customers may only manage their own booking, proven by matching the phone they booked with.
+    if (!$isAdmin) {
+        $phone = normalize_phone($input['phone'] ?? '');
+        if (!$phone || $phone !== normalize_phone($booking['customer_phone'])) {
+            json_out(['error' => 'מספר הטלפון אינו תואם לתור זה'], 403);
+        }
+        if ($booking['status'] !== 'confirmed') json_out(['error' => 'התור הזה כבר בוטל'], 400);
+    }
 
     if ($action === 'cancel') {
         $pdo->prepare('UPDATE bookings SET status="cancelled" WHERE id=?')->execute([$id]);
@@ -123,6 +154,7 @@ if ($method === 'PUT') {
         $duration = (int) $booking['duration_minutes'];
         $newStart = DateTime::createFromFormat('Y-m-d H:i', "$date $time");
         $newEnd = (clone $newStart)->modify("+{$duration} minutes");
+        if ($newStart < new DateTime()) json_out(['error' => 'לא ניתן לקבוע תור בעבר'], 400);
 
         $stmt = $pdo->prepare(
             'SELECT b.booking_time, s.duration_minutes FROM bookings b

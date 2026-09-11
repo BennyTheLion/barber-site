@@ -325,6 +325,126 @@ function setupScrollReveal() {
   targets.forEach(function (t) { observer.observe(t); });
 }
 
+/* ── Manage existing booking (self-service cancel/reschedule by phone) ─ */
+var manageState = { phone: '' };
+
+function toast(msg) {
+  var t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 2200);
+}
+
+function lookupMyBookings() {
+  var phone = document.getElementById('manage-phone').value.trim();
+  if (!phone) { alert('נא להזין מספר טלפון'); return; }
+  manageState.phone = phone;
+  api('api/booking.php?phone=' + encodeURIComponent(phone)).then(function (res) {
+    renderMyBookings(res.ok ? (res.data || []) : []);
+  });
+}
+
+function renderMyBookings(rows) {
+  var el = document.getElementById('manage-list');
+  el.innerHTML = '';
+  if (!rows.length) {
+    el.innerHTML = '<div style="font-size:13.5px;color:oklch(0.94 0.006 260 / 0.5);">לא נמצאו תורים פעילים למספר זה</div>';
+    return;
+  }
+  rows.forEach(function (b) {
+    var row = document.createElement('div');
+    row.className = 'card';
+    row.style.cssText = 'padding:14px;margin-bottom:10px;';
+    row.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+      '<div style="font-size:13.5px;line-height:1.6;"><div style="font-weight:700;">' + b.service_name + '</div>' +
+      '<div>' + b.customer_name + '</div></div>' +
+      '<div style="text-align:left;font-size:13px;white-space:nowrap;">' + b.booking_date + '<br>' + b.booking_time.slice(0, 5) + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;margin-top:12px;">' +
+      '<button class="btn btn-sm btn-ghost" data-resched="' + b.id + '">עדכון מועד</button>' +
+      '<button class="btn btn-sm btn-danger" data-cancel="' + b.id + '">ביטול תור</button>' +
+      '</div>' +
+      '<div class="hidden" id="my-resched-' + b.id + '" style="margin-top:14px;"></div>';
+    el.appendChild(row);
+    row.querySelector('[data-cancel]').onclick = function () { cancelMyBooking(b.id); };
+    row.querySelector('[data-resched]').onclick = function () { toggleMyReschedule(b); };
+  });
+}
+
+function cancelMyBooking(id) {
+  if (!confirm('לבטל תור זה?')) return;
+  api('api/booking.php', { method: 'PUT', body: JSON.stringify({ id: id, action: 'cancel', phone: manageState.phone }) })
+    .then(function (res) {
+      if (res.ok) { toast('התור בוטל'); lookupMyBookings(); } else alert(res.data.error || 'שגיאה');
+    });
+}
+
+function toggleMyReschedule(b) {
+  var container = document.getElementById('my-resched-' + b.id);
+  if (!container.classList.contains('hidden')) { container.classList.add('hidden'); container.innerHTML = ''; return; }
+  container.classList.remove('hidden');
+  container.innerHTML =
+    '<div class="field"><label>תאריך חדש</label><input type="date" id="my-date-' + b.id + '"></div>' +
+    '<div class="section-title">שעות פנויות</div>' +
+    '<div id="my-slots-' + b.id + '" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;"></div>' +
+    '<button class="btn btn-primary" style="margin-top:12px;" id="my-save-' + b.id + '" disabled>שמירת מועד חדש</button>';
+
+  var dateInput = document.getElementById('my-date-' + b.id);
+  var today = new Date();
+  dateInput.min = today.toISOString().slice(0, 10);
+  dateInput.max = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
+  dateInput.value = b.booking_date;
+
+  var chosenTime = null;
+  var saveBtn = document.getElementById('my-save-' + b.id);
+
+  function loadMySlots() {
+    var slotsEl = document.getElementById('my-slots-' + b.id);
+    slotsEl.innerHTML = '<div style="grid-column:1/-1;font-size:13px;color:oklch(0.94 0.006 260 / 0.5);">טוען שעות...</div>';
+    chosenTime = null;
+    saveBtn.disabled = true;
+    api('api/availability.php?date=' + dateInput.value + '&service_id=' + b.service_id + '&exclude_booking_id=' + b.id).then(function (res) {
+      var slots = (res.data && res.data.slots) || [];
+      slotsEl.innerHTML = '';
+      if (!slots.length) {
+        slotsEl.innerHTML = '<div style="grid-column:1/-1;font-size:13.5px;color:oklch(0.94 0.006 260 / 0.5);">אין שעות פנויות בתאריך זה</div>';
+        return;
+      }
+      var currentTime = b.booking_time.slice(0, 5);
+      slots.forEach(function (s) {
+        var isCurrent = dateInput.value === b.booking_date && s.time === currentTime;
+        var div = document.createElement('div');
+        div.className = 'slot' + (isCurrent ? ' selected' : '');
+        div.textContent = s.time;
+        div.onclick = function () {
+          haptic(8);
+          chosenTime = s.time;
+          Array.prototype.forEach.call(slotsEl.children, function (el) { el.classList.remove('selected'); });
+          div.classList.add('selected');
+          saveBtn.disabled = false;
+        };
+        slotsEl.appendChild(div);
+        if (isCurrent) { chosenTime = s.time; saveBtn.disabled = false; }
+      });
+    });
+  }
+
+  dateInput.addEventListener('change', loadMySlots);
+  loadMySlots();
+
+  saveBtn.onclick = function () {
+    if (!chosenTime) return;
+    api('api/booking.php', {
+      method: 'PUT',
+      body: JSON.stringify({ id: b.id, action: 'reschedule', date: dateInput.value, time: chosenTime, phone: manageState.phone }),
+    }).then(function (res) {
+      if (res.ok) { toast('התור עודכן'); lookupMyBookings(); } else alert(res.data.error || 'שגיאה');
+    });
+  };
+}
+
 /* ── Accessibility widget ────────────────────────────────────────────── */
 function toggleA11yPanel() {
   document.getElementById('a11y-panel').classList.toggle('hidden');

@@ -143,6 +143,19 @@
     </div>
   </div>
 
+  <!-- MANAGE EXISTING BOOKING (cancel / reschedule, self-service by phone) -->
+  <div id="manage-card" class="observe card" style="margin:0 20px 32px; padding:22px 18px;">
+    <div class="section-title">ניהול תור קיים</div>
+    <div style="font-size:13px; color:oklch(0.94 0.006 260 / 0.55); margin-bottom:14px; line-height:1.6;">
+      הזינו את הטלפון שאיתו קבעתם את התור, כדי לעדכן מועד או לבטל.
+    </div>
+    <div style="display:flex; gap:8px; align-items:flex-end;">
+      <div class="field" style="margin-bottom:0; flex:1;"><label>טלפון</label><input type="tel" id="manage-phone" placeholder="050-0000000"></div>
+      <button class="btn btn-ghost btn-auto" onclick="lookupMyBookings()">חיפוש</button>
+    </div>
+    <div id="manage-list" style="margin-top:16px;"></div>
+  </div>
+
   <!-- CTA -->
   <div class="observe" style="margin:0 20px 28px; padding:24px 20px; border-radius:18px; background:oklch(0.85 0.19 145); display:flex; flex-direction:column; gap:14px;">
     <div>

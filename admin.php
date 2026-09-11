@@ -67,7 +67,7 @@ $loggedIn = !empty($_SESSION['admin_id']);
     </div>
   </div>
 
-  <div style="padding:10px 20px 0;">
+  <div style="padding:16px 20px 4px;">
     <button id="push-toggle-btn" class="btn btn-ghost" style="width:100%; font-size:13.5px;">🔕 הפעלת התראות דחיפה למכשיר זה</button>
   </div>
 
